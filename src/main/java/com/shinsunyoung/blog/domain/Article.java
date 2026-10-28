@@ -34,4 +34,10 @@ public class Article {
         this.title = title;
         this.content = content;
     }
+
+    // 게시글 수정 요청을 받았을 때 제목, 내용을 수정하는 메소드
+    public void update(String title, String content){
+        this.title = title;
+        this.content = content;
+    }
 }

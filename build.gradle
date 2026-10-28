@@ -100,6 +100,9 @@ dependencies {
     // [annotationProcessor : 컴파일할 때 어노테이션을 읽어서 코드를 만드는 도구로 등록합니다.]
     // 위 lombok 이 실제로 코드를 만드는 역할을 맡습니다. compileOnly 와 한 쌍으로 적습니다.
     annotationProcessor 'org.projectlombok:lombok'
+
+    // 타임리프 view를 사용하기 위한 라이브러리
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 }
 
 tasks.named('test') {

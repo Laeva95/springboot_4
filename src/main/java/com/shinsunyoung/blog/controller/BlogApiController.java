@@ -3,6 +3,7 @@ package com.shinsunyoung.blog.controller;
 import com.shinsunyoung.blog.domain.Article;
 import com.shinsunyoung.blog.dto.AddArticleRequest;
 import com.shinsunyoung.blog.dto.ArticleResponse;
+import com.shinsunyoung.blog.dto.UpdateArticleRequest;
 import com.shinsunyoung.blog.service.BlogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -67,5 +68,17 @@ public class BlogApiController {
 
         // 응답 상태 코드 반환
         return ResponseEntity.ok().build();
+    }
+
+    // Put 요청 처리
+    // 게시글 하나 수정
+    @PutMapping("/api/articles/{id}")
+    public ResponseEntity<Article> updateArticle(@PathVariable long id,
+                                                 @RequestBody UpdateArticleRequest request){
+        // id를 통해 꺼낸 엔티티의 값을 수정하여 반환 받음
+        Article updatedArticle = blogService.update(id, request);
+
+        // 응답 상태 코드와 반환 받은 엔티티 출력
+        return ResponseEntity.ok().body(updatedArticle);
     }
 }

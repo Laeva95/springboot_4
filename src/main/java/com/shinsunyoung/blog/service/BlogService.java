@@ -2,10 +2,12 @@ package com.shinsunyoung.blog.service;
 
 import com.shinsunyoung.blog.domain.Article;
 import com.shinsunyoung.blog.dto.AddArticleRequest;
+import com.shinsunyoung.blog.dto.UpdateArticleRequest;
 import com.shinsunyoung.blog.repository.BlogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -46,5 +48,19 @@ public class BlogService {
 
         // id로 게시글 하나 삭제
         blogRepository.deleteById(id);
+    }
+
+    @Transactional
+    public Article update(long id, UpdateArticleRequest request){
+        // id를 통해 엔티티를 꺼냄
+        // 없으면 예외 처리
+        Article article = blogRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "not found: " + id));
+
+        // 엔티티의 데이터만 요청 dto 객체의 데이터로 변경
+        // 저장소에 직접 save하여 저장하지 않음
+        article.update(request.getTitle(), request.getContent());
+
+        return article;
     }
 }

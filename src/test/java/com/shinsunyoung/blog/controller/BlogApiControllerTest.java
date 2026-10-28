@@ -2,6 +2,7 @@ package com.shinsunyoung.blog.controller;
 
 import com.shinsunyoung.blog.domain.Article;
 import com.shinsunyoung.blog.dto.AddArticleRequest;
+import com.shinsunyoung.blog.dto.UpdateArticleRequest;
 import com.shinsunyoung.blog.repository.BlogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -169,12 +170,54 @@ class BlogApiControllerTest {
                                             .build());
 
         // when
+        // 게시글 하나 삭제 요청
         mockMvc.perform(delete(url, savedArticle.getId()))
                 .andExpect(status().isOk());
 
         // then
+        // 게시글 전체 조회
         List<Article> articles = blogRepository.findAll();
 
+        // 현재 게시글이 비어있는지 테스트
         assertThat(articles).isEmpty();
+    }
+
+    @DisplayName("updateArticle: 블로그 글 수정에 성공한다.")
+    @Test
+    public void updateArticle() throws Exception {
+        // given
+        // 저장할 글 데이터 생성
+        final String url = "/api/articles/{id}";
+        final String title = "title";
+        final String content = "content";
+
+        // 저장할 글 객체 생성 후 데이터베이스에 저장
+        Article savedArticle = blogRepository.save(Article.builder()
+                .title(title)
+                .content(content)
+                .build());
+
+        // 변경할 글 데이터 생성
+        final String newTitle = "new title";
+        final String newContent = "new content";
+
+        // 변경할 글 데이터를 보관하는 dto 객체 생성
+        UpdateArticleRequest request = new UpdateArticleRequest(newTitle, newContent);
+
+        // when
+        // 게시글 수정 요청
+        ResultActions result = mockMvc.perform(put(url, savedArticle.getId())
+                .contentType(MediaType.APPLICATION_JSON_VALUE).content(objectMapper.writeValueAsString(request)));
+
+        // then
+        // 응답 상태 코드 테스트
+        result.andExpect(status().isOk());
+
+        // 데이터베이스에서 기존 엔티티의 id와 같은 데이터를 갖는 엔티티 가져옴
+        Article article = blogRepository.findById(savedArticle.getId()).get();
+
+        // 데이터베이스에서 가져온 엔티티의 데이터가 변경되었는지 확인
+        assertThat(article.getTitle()).isEqualTo(newTitle);
+        assertThat(article.getContent()).isEqualTo(newContent);
     }
 }
