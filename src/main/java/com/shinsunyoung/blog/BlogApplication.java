@@ -2,6 +2,8 @@ package com.shinsunyoung.blog;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+
 // @SpringBootApplication : 스프링 부트 프로젝트의 시작 표시입니다.
 // SpringApplication.run 이 이 표시가 붙은 클래스를 기준으로 스프링 컨테이너(ApplicationContext 객체)를 만들고 프로젝트 설정을 읽습니다.
 // 이 표시 안에는 아래 세 가지 기능이 들어 있습니다.
@@ -10,6 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 // 3) 컴포넌트 검색 : 이 파일이 있는 패키지(me.shinsunyoung.springbootdeveloper)와 그 아래 패키지
 //    (controller, domain, dto, repository, service)를 검색해서 @Controller, @Service, @Repository 등이 붙은 클래스를 찾아
 //    객체(빈)를 자동 생성하고 보관합니다.
+@EnableJpaAuditing  // created_at, updated_at 자동 업데이트
 @SpringBootApplication
 public class BlogApplication {
 

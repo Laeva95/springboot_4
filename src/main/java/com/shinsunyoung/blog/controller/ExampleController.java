@@ -14,6 +14,7 @@ import java.util.List;
 public class ExampleController {
 
     // Get 요청 처리
+    // http://localhost:8080/thymeleaf/example
     @GetMapping("/thymeleaf/example")
     // Model: view 페이지로 데이터를 전달하기 위한 객체
     public String thymeleafExample(Model model){
