@@ -50,6 +50,14 @@ repositories {
 }
 
 dependencies {
+    // 로그인을 위한 스프링 시큐리티 라이브러리
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // 타임리프에서 스프링 시큐리티를 사용하기 위한 라이브러리
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+
+    // 로그인 테스트를 위한 스프링 시큐리티 테스트 라이브러리
+    testImplementation 'org.springframework.security:spring-security-test'
 
     // [8장 · 스프링 AI 의존성]
     // BOM(버전 목록표): 스프링 AI 라이브러리들의 버전을 한 번에 맞춰 줍니다. 여기서는 2.0.0-M1입니다.

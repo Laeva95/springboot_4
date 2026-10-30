@@ -62,8 +62,8 @@ spring:
   ai:
     # openai: OpenAI 형식으로 대화하는 AI 서버 설정
     openai:
-      #base-uri: api 요청을 보낼 주소
-      base-uri: http://openrouter.ai/api
+      #base-url: api 요청을 보낼 주소
+      base-url: http://openrouter.ai/api
 
       # api 키 설정
       # 노출을 피하기 위해 환경변수에 등록하여 바인딩
@@ -71,5 +71,7 @@ spring:
 
       # 모델 명 설정
       chat:
+        base-url: https://openrouter.ai/api
+        api-key: ${OPENROUTER_API_KEY}
         options:
           model: openrouter/free

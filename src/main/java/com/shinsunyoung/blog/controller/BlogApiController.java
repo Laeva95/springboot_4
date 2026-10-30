@@ -1,10 +1,9 @@
 package com.shinsunyoung.blog.controller;
 
 import com.shinsunyoung.blog.domain.Article;
-import com.shinsunyoung.blog.dto.AddArticleRequest;
-import com.shinsunyoung.blog.dto.ArticleResponse;
-import com.shinsunyoung.blog.dto.UpdateArticleRequest;
+import com.shinsunyoung.blog.dto.*;
 import com.shinsunyoung.blog.service.BlogService;
+import com.shinsunyoung.blog.service.WritingAssistantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +16,10 @@ import java.util.List;
 public class BlogApiController {
     // Service 객체 주입
     private final BlogService blogService;
+
+    // [8장 · 글쓰기 도우미] AI에게 글쓰기 제안을 받아오는 서비스입니다.
+    // @RequiredArgsConstructor 덕분에 final 필드들은 생성자로 자동 주입됩니다.
+    private final WritingAssistantService writingAssistantService;
 
     // Post 요청을 처리하는 메소드
     // 게시글 하나 추가
@@ -80,5 +83,16 @@ public class BlogApiController {
 
         // 응답 상태 코드와 반환 받은 엔티티 출력
         return ResponseEntity.ok().body(updatedArticle);
+    }
+
+    // [8장 · 글쓰기 도우미 · API] 브라우저의 "제안 받기" 버튼이 호출하는 주소입니다.
+    // 흐름: 브라우저(JSON) → 이 메서드 → WritingAssistantService(AI 호출) → JSON 제안 목록 응답
+    // 요청 예) POST /api/ai-suggestions  {"title": "...", "content": "...", "question": "..."}
+    @PostMapping("/api/ai-suggestions")
+    public ResponseEntity<WritingSuggestionsResponse> writingAssist(@RequestBody WritingSuggestionRequest request) {
+        WritingSuggestionsResponse response = writingAssistantService.getWritingAssist(request);
+
+        return ResponseEntity.ok()
+                .body(response);
     }
 }
