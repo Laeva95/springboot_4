@@ -14,9 +14,11 @@ public class UserDetailService implements UserDetailsService {
     // 생성자를 통해 의존성 주입(DI)
     private final UserRepository userRepository;
 
+    // 스프링 시큐리티에서 로그인을 처리하는 메소드
     @Override
     public UserDetails loadUserByUsername(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException(email));
+                // UserNameNotFoundException(): 유저 이름을 찾을 수 없음
+                .orElseThrow(() -> new UsernameNotFoundException("회원을 찾을 수 없습니다. email = " + email));
     }
 }
