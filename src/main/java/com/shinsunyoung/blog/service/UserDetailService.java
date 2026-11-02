@@ -15,6 +15,7 @@ public class UserDetailService implements UserDetailsService {
     private final UserRepository userRepository;
 
     // 스프링 시큐리티에서 로그인을 처리하는 메소드
+    // 로그인 요청시 해당 메소드가 호출되어 로그인 처리
     @Override
     public UserDetails loadUserByUsername(String email) {
         return userRepository.findByEmail(email)

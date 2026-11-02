@@ -13,6 +13,12 @@ import org.springframework.stereotype.Service;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    
+    public User findById(Long userId){
+        // 데이터베이스에서 사용자 번호를 통해 유저 조회
+        return userRepository.findById(userId).orElseThrow(()
+                -> new IllegalArgumentException("오류 발생"));
+    }
 
     // 회원 가입에 성공한 유저의 Id를 반환
     public Long save(AddUserRequest dto){

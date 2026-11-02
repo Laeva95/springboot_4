@@ -67,8 +67,14 @@ public class WebSecurityConfig {
                 // logout(): 로그아웃 설정
                 .logout(logout -> logout
 
+                        // logoutUrl: 로그아웃을 요청할 URL 경로
+                        .logoutUrl("/logout")
+
                         // logoutSuccessUrl(): 로그아웃에 성공했을 때 요청 경로
                         .logoutSuccessUrl("/login")
+
+                        // .deleteCookies(): 해당 브라우저의 쿠키 삭제
+                        .deleteCookies("JSESSIONID")
 
                         // invalidateHttpSession(): 톰캣에서 HttpSession 객체 삭제
                         .invalidateHttpSession(true)
