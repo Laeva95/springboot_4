@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -29,9 +30,9 @@ public class BlogApiController {
     // @PathVariable: URL 경로의 값을 가져옴
     // ResponseEntity<>: HTTP 응답 전체를 구성할 수 있도록 제공하는 클래스
     //                  HTTP 상태 코드, 응답 본문, 응답 헤더를 함께 설정 할 수 있음
-    public ResponseEntity<Article> addArticle(@RequestBody AddArticleRequest request){
+    public ResponseEntity<Article> addArticle(@RequestBody AddArticleRequest request, Principal principal){
         // 매개변수 객체를 데이터베이스에 저장하고, 해당 엔티티 객체를 변수에 저장
-        Article savedArticle = blogService.save(request);
+        Article savedArticle = blogService.save(request, principal.getName());
 
         // 저장된 게시글 정보와 저장 성공 코드를 반환
         return ResponseEntity.status(HttpStatus.CREATED).body(savedArticle);

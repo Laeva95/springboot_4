@@ -4,6 +4,7 @@ import com.shinsunyoung.blog.domain.User;
 import com.shinsunyoung.blog.dto.AddUserRequest;
 import com.shinsunyoung.blog.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserService {
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+
     
     public User findById(Long userId){
         // 데이터베이스에서 사용자 번호를 통해 유저 조회
@@ -20,14 +21,22 @@ public class UserService {
                 -> new IllegalArgumentException("오류 발생"));
     }
 
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Unexpected user"));
+    }
+
     // 회원 가입에 성공한 유저의 Id를 반환
     public Long save(AddUserRequest dto){
+
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
         return userRepository
                 // User 클래스의 builder 패턴으로 새 유저 생성해서 DB에 저장 후 id 반환
                 .save(User
                         .builder()
                         .email(dto.getEmail())
-                        .password(passwordEncoder.encode(dto.getPassword()))
+                        .password(encoder.encode(dto.getPassword()))
                         .build())
                 .getId();
 

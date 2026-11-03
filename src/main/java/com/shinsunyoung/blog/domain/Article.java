@@ -26,6 +26,9 @@ public class Article {
     @Column(name = "id", updatable = false)
     private Long id;
 
+    @Column(name = "author", nullable = false)
+    private String author;
+
     // title: null 값 저장 불가능
     @Column(name = "title", nullable = false)
     private String title;
@@ -36,7 +39,8 @@ public class Article {
 
     // 빌더 패턴으로 객체 생성
     @Builder
-    public Article(String title, String content){
+    public Article(String author, String title, String content){
+        this.author = author;
         this.title = title;
         this.content = content;
     }

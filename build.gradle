@@ -131,6 +131,9 @@ dependencies {
 
     // 타임리프 view를 사용하기 위한 라이브러리
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+    // oauth2 사용을 위한 라이브러리
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 }
 
 tasks.named('test') {

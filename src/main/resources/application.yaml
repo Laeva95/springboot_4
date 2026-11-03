@@ -75,6 +75,17 @@ spring:
         api-key: ${OPENROUTER_API_KEY}
         options:
           model: openrouter/free
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_ID}
+            client-secret: ${GOOGLE_PW}
+            scope:
+              - email
+              - profile
 # JWT 설정 그룹
 jwt:
   issuer: dnskrdl123@gmail.com

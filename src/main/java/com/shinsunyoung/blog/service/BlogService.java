@@ -6,6 +6,7 @@ import com.shinsunyoung.blog.dto.UpdateArticleRequest;
 import com.shinsunyoung.blog.repository.BlogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,9 +20,9 @@ public class BlogService {
     private final BlogRepository blogRepository;
 
     // 게시글 하나 추가 메소드
-    public Article save(AddArticleRequest request){
+    public Article save(AddArticleRequest request, String userName){
         // 매개변수 객체를 엔티티 객체로 변경하여 저장 후 반환
-        return blogRepository.save(request.toEntity());
+        return blogRepository.save(request.toEntity(userName));
     }
 
     // 게시글 목록 전체 조회 메소드
@@ -39,28 +40,29 @@ public class BlogService {
 
     // 게시글 하나 삭제 메소드
     public void delete(long id){
-        // id를 통해 게시글이 존재하는지 확인
-        // existsById(id): id 값을 통해 데이터베이스에 데이터가 존재하는지 확인
-        if(!blogRepository.existsById(id)){
-            // 404 에러 및 메세시 출력
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "not found: " + id);
-        }
+        Article article = blogRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("not found: " + id));
 
-        // id로 게시글 하나 삭제
-        blogRepository.deleteById(id);
+        authorizeArticleAuthor(article);
+        blogRepository.delete(article);
     }
 
     @Transactional
-    public Article update(long id, UpdateArticleRequest request){
-        // id를 통해 엔티티를 꺼냄
-        // 없으면 예외 처리
+    public Article update(long id, UpdateArticleRequest request) {
         Article article = blogRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("not found : " + id));
 
-        // 엔티티의 데이터만 요청 dto 객체의 데이터로 변경
-        // 저장소에 직접 save하여 저장하지 않음
+        authorizeArticleAuthor(article);
         article.update(request.getTitle(), request.getContent());
 
         return article;
+    }
+
+
+    private static void authorizeArticleAuthor(Article article) {
+        String userName = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (!article.getAuthor().equals(userName)) {
+            throw new IllegalArgumentException("not authorized");
+        }
     }
 }

@@ -36,7 +36,8 @@ public class User implements UserDetails {
     @Column(name = "password")
     private String password;
 
-    @Column(name = "nickname")
+    // 별명: 중복되지 않아야 하므로 unique 조건을 줌
+    @Column(name = "nickname", unique = true)
     private String nickname;
 
     // 회원가입 시 사용하기 위한 빌더
@@ -44,7 +45,7 @@ public class User implements UserDetails {
     public User(String email, String password, String nickname) {
         this.email = email;
         this.password = password;
-//        this.nickname = nickname;
+        this.nickname = nickname;
     }
 
     // 기타 UserDetails 필수 오버라이드 메서드 (true 반환)
@@ -85,5 +86,11 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    // 기존 사용자의 이름이 바뀌었을 때 별명을 갱신
+    public User update(String nickname) {
+        this.nickname = nickname;
+        return this;
     }
 }

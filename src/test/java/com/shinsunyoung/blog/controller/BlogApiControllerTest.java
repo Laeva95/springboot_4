@@ -1,22 +1,30 @@
 package com.shinsunyoung.blog.controller;
 
 import com.shinsunyoung.blog.domain.Article;
+import com.shinsunyoung.blog.domain.User;
 import com.shinsunyoung.blog.dto.AddArticleRequest;
 import com.shinsunyoung.blog.dto.UpdateArticleRequest;
 import com.shinsunyoung.blog.repository.BlogRepository;
+import com.shinsunyoung.blog.repository.UserRepository;
+import com.shinsunyoung.blog.service.BlogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.ObjectMapper;
 
+import java.security.Principal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,6 +58,25 @@ class BlogApiControllerTest {
     // 데이터베이스 접근을 위한 저장소 객체
     @Autowired
     protected BlogRepository blogRepository;
+    @Autowired
+    protected UserRepository userRepository;
+
+    User user;
+
+@BeforeEach
+void setSecurityContext(){
+    userRepository.deleteAll();
+
+    user = userRepository.save(User.builder()
+            .email("user@gmail.com")
+            .password("test")
+            .build());
+
+    SecurityContext context = SecurityContextHolder.getContext();
+
+    context.setAuthentication(new UsernamePasswordAuthenticationToken(
+            user, user.getPassword(), user.getAuthorities()));
+}
 
     // 각 테스트가 실행되기 전에 호출되는 메소드
     // mockMvc 객체를 생성하고, 데이터베이스의 모든 데이터 삭제
@@ -74,10 +101,14 @@ class BlogApiControllerTest {
         // 객체 json으로 직렬화
         final String requestBody = objectMapper.writeValueAsString(userRequest);
 
+        Principal principal = Mockito.mock(Principal.class);
+        Mockito.when(principal.getName()).thenReturn("username");
+
         // when
         // 설정한 내용을 바탕으로 요청 전송
         ResultActions result = mockMvc.perform(post(url)
                                                 .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                                .principal(principal)
                                                 .content(requestBody));
 
         // then
@@ -101,14 +132,7 @@ class BlogApiControllerTest {
         // given
         // 저장할 글 데이터 생성
         final String url = "/api/articles";
-        final String title = "title";
-        final String content = "content";
-
-        // 저장할 글 객체 생성 후 데이터베이스에 저장
-        blogRepository.save(Article.builder()
-                                    .title(title)
-                                    .content(content)
-                                    .build());
+        Article savedArticle = createDefaultArticle();
 
         // when
         // get 요청 실행
@@ -121,8 +145,8 @@ class BlogApiControllerTest {
         // json 데이터의 content 값와 title 값이 입력값과 일치하는지 확인
         // $: 응답받은 json 배열 데이터 전체를 의미
         result.andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].content").value(content))
-                .andExpect(jsonPath("$[0].title").value(title));
+                .andExpect(jsonPath("$[0].content").value(savedArticle.getContent()))
+                .andExpect(jsonPath("$[0].title").value(savedArticle.getTitle()));
     }
 
     @DisplayName("findArticle: 블로그 글 조회에 성공하는지 테스트")
@@ -131,14 +155,8 @@ class BlogApiControllerTest {
         // given
         // 저장할 글 데이터 생성
         final String url = "/api/articles/{id}";
-        final String title = "title";
-        final String content = "content";
 
-        // 저장할 글 객체 생성 후 데이터베이스에 저장
-        Article savedArticle = blogRepository.save(Article.builder()
-                                            .title(title)
-                                            .content(content)
-                                            .build());
+        Article savedArticle = createDefaultArticle();
 
         // when
         // get 요청 실행
@@ -150,8 +168,8 @@ class BlogApiControllerTest {
         // json 데이터의 content 값와 title 값이 입력값과 일치하는지 확인
         // $: 응답받은 json 배열 데이터 전체를 의미
         result.andExpect(status().isOk())
-                .andExpect(jsonPath("$.content").value(content))
-                .andExpect(jsonPath("$.title").value(title));
+                .andExpect(jsonPath("$.content").value(savedArticle.getContent()))
+                .andExpect(jsonPath("$.title").value(savedArticle.getTitle()));
     }
 
     @DisplayName("deleteArticle: 블로그 글 삭제에 성공하는지 테스트")
@@ -160,14 +178,8 @@ class BlogApiControllerTest {
         // given
         // 저장할 글 데이터 생성
         final String url = "/api/articles/{id}";
-        final String title = "title";
-        final String content = "content";
 
-        // 저장할 글 객체 생성 후 데이터베이스에 저장
-        Article savedArticle = blogRepository.save(Article.builder()
-                                            .title(title)
-                                            .content(content)
-                                            .build());
+        Article savedArticle = createDefaultArticle();
 
         // when
         // 게시글 하나 삭제 요청
@@ -188,14 +200,8 @@ class BlogApiControllerTest {
         // given
         // 저장할 글 데이터 생성
         final String url = "/api/articles/{id}";
-        final String title = "title";
-        final String content = "content";
 
-        // 저장할 글 객체 생성 후 데이터베이스에 저장
-        Article savedArticle = blogRepository.save(Article.builder()
-                .title(title)
-                .content(content)
-                .build());
+        Article savedArticle = createDefaultArticle();
 
         // 변경할 글 데이터 생성
         final String newTitle = "new title";
@@ -219,5 +225,13 @@ class BlogApiControllerTest {
         // 데이터베이스에서 가져온 엔티티의 데이터가 변경되었는지 확인
         assertThat(article.getTitle()).isEqualTo(newTitle);
         assertThat(article.getContent()).isEqualTo(newContent);
+    }
+
+    private Article createDefaultArticle(){
+    return blogRepository.save(Article.builder()
+            .title("title")
+            .author(user.getUsername())
+            .content("content")
+            .build());
     }
 }
