@@ -9,6 +9,7 @@ import com.shinsunyoung.blog.domain.User;
 import com.shinsunyoung.blog.repository.RefreshTokenRepository;
 import com.shinsunyoung.blog.service.UserService;
 import com.shinsunyoung.blog.util.CookieUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -21,11 +22,14 @@ import java.time.Duration;
 @RequiredArgsConstructor
 @Component
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
-
+    public static final String ACCESS_TOKEN_COOKIE_NAME = "access_token";
     public static final String REFRESH_TOKEN_COOKIE_NAME = "refresh_token";
     public static final Duration REFRESH_TOKEN_DURATION = Duration.ofDays(14);
     public static final Duration ACCESS_TOKEN_DURATION = Duration.ofDays(1);
     public static final String REDIRECT_PATH = "/articles";
+
+    @Value("${app.cookie.secure:false}")
+    private boolean secureCookie;
 
     private final TokenProvider tokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -33,26 +37,67 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final UserService userService;
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                        Authentication authentication) throws IOException {
-        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        User user = userService.findByEmail((String) oAuth2User.getAttributes().get("email"));
+    public void onAuthenticationSuccess(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Authentication authentication
+    ) throws IOException {
 
-        // ❶ 리프레시 토큰 생성 → DB 저장 → 쿠키에 담기
-        String refreshToken = tokenProvider.generateToken(user, REFRESH_TOKEN_DURATION);
+        OAuth2User oAuth2User =
+                (OAuth2User) authentication.getPrincipal();
+
+        User user = userService.findByEmail(
+                (String) oAuth2User.getAttributes().get("email")
+        );
+
+        // ① Refresh Token 생성
+        String refreshToken =
+                tokenProvider.generateToken(
+                        user, REFRESH_TOKEN_DURATION
+                );
+
+        // ② Refresh Token DB 저장
         saveRefreshToken(user.getId(), refreshToken);
-        addRefreshTokenToCookie(request, response, refreshToken);
 
-        // ❷ 액세스 토큰 생성 → 리다이렉트 주소에 붙이기
-        String accessToken = tokenProvider.generateToken(user, ACCESS_TOKEN_DURATION);
-        String targetUrl = getTargetUrl(accessToken);
+        // ③ Refresh Token을 HttpOnly 쿠키에 저장
+        CookieUtil.addHttpOnlyCookie(
+                response,
+                REFRESH_TOKEN_COOKIE_NAME,
+                refreshToken,
+                REFRESH_TOKEN_DURATION,
+                secureCookie
+        );
 
-        // ❸ 인증 관련 임시 값과 쿠키 삭제
+        // ④ Access Token 생성
+        String accessToken =
+                tokenProvider.generateToken(
+                        user, ACCESS_TOKEN_DURATION
+                );
+
+        // ⑤ Access Token도 HttpOnly 쿠키에 저장
+        CookieUtil.addHttpOnlyCookie(
+                response,
+                ACCESS_TOKEN_COOKIE_NAME,
+                accessToken,
+                ACCESS_TOKEN_DURATION,
+                secureCookie
+        );
+
+        // ⑥ 민감한 응답의 캐싱 방지
+        response.setHeader("Cache-Control", "no-store");
+
+        // ⑦ OAuth2 임시 정보 삭제
         super.clearAuthenticationAttributes(request);
-        authorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
 
-        // ❹ 글 목록으로 이동
-        getRedirectStrategy().sendRedirect(request, response, targetUrl);
+        authorizationRequestRepository
+                .removeAuthorizationRequestCookies(request, response);
+
+        // ⑧ 토큰 없이 글 목록으로 이동
+        getRedirectStrategy().sendRedirect(
+                request,
+                response,
+                REDIRECT_PATH
+        );
     }
 
     // 리프레시 토큰을 사용자 ID와 함께 저장 (이미 있으면 값만 갱신)

@@ -6,6 +6,7 @@ import com.shinsunyoung.blog.dto.UpdateArticleRequest;
 import com.shinsunyoung.blog.repository.BlogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,7 @@ public class BlogService {
                 .orElseThrow(() -> new IllegalArgumentException("not found: " + id));
     }
 
+    @Transactional
     // 게시글 하나 삭제 메소드
     public void delete(long id){
         Article article = blogRepository.findById(id)
@@ -60,9 +62,17 @@ public class BlogService {
 
 
     private static void authorizeArticleAuthor(Article article) {
-        String userName = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        String userName = SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+
+        System.out.println("게시글 작성자: " + article.getAuthor());
+        System.out.println("로그인 사용자: " + userName);
+
         if (!article.getAuthor().equals(userName)) {
-            throw new IllegalArgumentException("not authorized");
+            throw new AccessDeniedException(
+                    "본인이 작성한 게시글만 수정하거나 삭제할 수 있습니다."
+            );
         }
     }
 }

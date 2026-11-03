@@ -91,3 +91,7 @@ jwt:
   issuer: dnskrdl123@gmail.com
   # 토큰의 비밀 키. 수업용이기 때문에 간단한 단어로 설정
   secret_key: study-springboot
+
+app:
+  cookie:
+    secure: ${COOKIE_SECURE:false}

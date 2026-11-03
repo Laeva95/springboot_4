@@ -215,13 +215,19 @@ const modifyButton = document.getElementById('modify-btn');
 
 if (modifyButton) {
     modifyButton.addEventListener('click', event => {
-        let params = new URLSearchParams(location.search);
-        let id = params.get('id');
 
-        body = JSON.stringify({
+        // hidden input에서 게시글 ID 가져오기
+        const id = document.getElementById('article-id').value;
+
+        if (!id) {
+            alert('게시글 번호를 확인할 수 없습니다.');
+            return;
+        }
+
+        const body = JSON.stringify({
             title: document.getElementById('title').value,
             content: document.getElementById('content').value
-        })
+        });
 
         function success() {
             alert('수정 완료되었습니다.');
@@ -230,10 +236,15 @@ if (modifyButton) {
 
         function fail() {
             alert('수정 실패했습니다.');
-            location.replace(`/articles/${id}`);
         }
 
-        httpRequest('PUT',`/api/articles/${id}`, body, success, fail);
+        httpRequest(
+            'PUT',
+            `/api/articles/${id}`,
+            body,
+            success,
+            fail
+        );
     });
 }
 
@@ -263,17 +274,35 @@ if (createButton) {
 const logoutButton = document.getElementById('logout-btn');
 
 if (logoutButton) {
-    logoutButton.addEventListener('click', event => {
-        function success() {
-            localStorage.removeItem('access_token');
-            deleteCookie('refresh_token');
-            location.replace('/login');
-        }
-        function fail() {
-            alert('로그아웃 실패했습니다.');
-        }
+    logoutButton.addEventListener('click', () => {
 
-        httpRequest('DELETE','/api/refresh-token', null, success, fail);
+        fetch('/api/refresh-token', {
+            method: 'DELETE',
+            credentials: 'same-origin'
+        })
+            .then(response => {
+
+                if (!response.ok) {
+                    throw new Error('로그아웃 요청 실패');
+                }
+
+                // Access Token 삭제
+                localStorage.removeItem('access_token');
+
+                // 로그인 화면으로 이동
+                location.replace('/login');
+            })
+            .catch(error => {
+                console.error(error);
+
+                // 서버 요청에 실패하더라도
+                // 현재 브라우저의 Access Token은 제거
+                localStorage.removeItem('access_token');
+
+                alert('서버 로그아웃 처리에 실패했습니다. 브라우저의 Access Token을 삭제합니다.');
+
+                location.replace('/login');
+            });
     });
 }
 
@@ -300,43 +329,83 @@ function deleteCookie(name) {
     document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 }
 
-// HTTP 요청을 보내는 함수
-function httpRequest(method, url, body, success, fail) {
-    fetch(url, {
-        method: method,
-        headers: {
-            Authorization: 'Bearer ' + localStorage.getItem('access_token'),
-            'Content-Type': 'application/json',
-        },
-        body: body,
-    }).then(response => {
-        if (response.status === 200 || response.status === 201) {
+async function httpRequest(
+    method,
+    url,
+    body,
+    success,
+    fail,
+    retried = false
+) {
+    try {
+        const headers = getCsrfHeaders();
+
+        headers['Content-Type'] = 'application/json';
+
+        const response = await fetch(url, {
+            method: method,
+            credentials: 'same-origin',
+            headers: headers,
+            body: body
+        });
+
+        // 인증 만료 시 토큰 재발급
+        if (response.status === 401 && !retried) {
+
+            const refreshResponse = await fetch('/api/token', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: getCsrfHeaders()
+            });
+
+            if (!refreshResponse.ok) {
+                console.error(
+                    '토큰 재발급 실패:',
+                    refreshResponse.status
+                );
+
+                return fail(refreshResponse.status);
+            }
+
+            return await httpRequest(
+                method,
+                url,
+                body,
+                success,
+                fail,
+                true
+            );
+        }
+
+        // 요청 성공
+        if (response.ok) {
             return success();
         }
-        const refresh_token = getCookie('refresh_token');
-        if (response.status === 401 && refresh_token) {
-            fetch('/api/token', {
-                method: 'POST',
-                headers: {
-                    Authorization: 'Bearer ' + localStorage.getItem('access_token'),
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    refreshToken: getCookie('refresh_token'),
-                }),
-            })
-                .then(res => {
-                    if (res.ok) {
-                        return res.json();
-                    }
-                })
-                .then(result => {
-                    localStorage.setItem('access_token', result.accessToken);
-                    httpRequest(method, url, body, success, fail);
-                })
-                .catch(error => fail());
-        } else {
-            return fail();
-        }
-    });
+
+        // 실패 원인 확인
+        const errorMessage = await response.text();
+
+        console.error('API 요청 실패');
+        console.error('요청 주소:', url);
+        console.error('HTTP 상태 코드:', response.status);
+        console.error('서버 응답:', errorMessage);
+
+        return fail(response.status, errorMessage);
+
+    } catch (error) {
+        console.error('요청 처리 중 예외 발생:', error);
+        return fail(null, error.message);
+    }
+}
+// CSRF 토큰을 요청 헤더에 추가
+function getCsrfHeaders(headers = {}) {
+
+    const csrfToken = getCookie('XSRF-TOKEN');
+
+    if (csrfToken) {
+        headers['X-XSRF-TOKEN'] =
+            decodeURIComponent(csrfToken);
+    }
+
+    return headers;
 }

@@ -4,6 +4,9 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.util.SerializationUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import java.time.Duration;
 
 import java.util.Base64;
 
@@ -42,5 +45,47 @@ public class CookieUtil {
     // 쿠키 값을 Base64로 풀고 역직렬화해 원래 객체로 되돌린다
     public static <T> T deserialize(Cookie cookie, Class<T> cls) {
         return cls.cast(SerializationUtils.deserialize(Base64.getUrlDecoder().decode(cookie.getValue())));
+    }
+
+    // 인증용 HttpOnly 쿠키 생성
+    public static void addHttpOnlyCookie(
+            HttpServletResponse response,
+            String name,
+            String value,
+            Duration maxAge,
+            boolean secure
+    ) {
+        ResponseCookie cookie = ResponseCookie.from(name, value)
+                .httpOnly(true)
+                .secure(secure)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(maxAge)
+                .build();
+
+        response.addHeader(
+                HttpHeaders.SET_COOKIE,
+                cookie.toString()
+        );
+    }
+
+    // 인증용 쿠키 삭제
+    public static void deleteHttpOnlyCookie(
+            HttpServletResponse response,
+            String name,
+            boolean secure
+    ) {
+        ResponseCookie cookie = ResponseCookie.from(name, "")
+                .httpOnly(true)
+                .secure(secure)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(Duration.ZERO)
+                .build();
+
+        response.addHeader(
+                HttpHeaders.SET_COOKIE,
+                cookie.toString()
+        );
     }
 }

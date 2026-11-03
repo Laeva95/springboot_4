@@ -3,6 +3,7 @@ package com.shinsunyoung.blog.config;
 import com.shinsunyoung.blog.config.jwt.TokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,8 @@ import java.io.IOException;
 // TokenAuthenticationFilter.java (config 패키지)
 @RequiredArgsConstructor
 public class TokenAuthenticationFilter extends OncePerRequestFilter {  // 요청당 한 번 실행되는 필터
-
+    private static final String ACCESS_TOKEN_COOKIE_NAME =
+            "access_token";
     private final TokenProvider tokenProvider;
     // 헤더 이름
     private final static String HEADER_AUTHORIZATION = "Authorization";
@@ -24,24 +26,36 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {  // 요청
 
     // 요청이 들어오면 해당 필터 메소드가 실행됨
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
-        // ① 요청 헤더의 Authorization 키의 값 조회
-        String authorizationHeader = request.getHeader(HEADER_AUTHORIZATION);
-        // ② 가져온 값에서 접두사 제거
-        String token = getAccessToken(authorizationHeader);
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        // ③ 가져온 토큰이 유효한지 확인하고, 유효할 때는 인증 정보 설정
-        if (tokenProvider.validToken(token)) {
-            // 유효 기간이 남았으면 이 토큰으로 인증 정보 생성
-            Authentication authentication = tokenProvider.getAuthentication(token);
+        // ① 쿠키에서 Access Token 가져오기
+        String token = getAccessTokenFromCookie(request);
 
-            // 만든 사용자 인증 정보 객체를 스프링 시큐리티의 저장소에 넣음
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        // 기존 방식과의 호환성을 위해 Authorization 헤더도 허용
+        if (token == null) {
+            String authorizationHeader =
+                    request.getHeader(HEADER_AUTHORIZATION);
+
+            token = getAccessToken(authorizationHeader);
         }
 
-        // ④ 다음 필터(또는 컨트롤러)로 요청 넘기기
+        // ② 토큰 유효성 검사
+        if (tokenProvider.validToken(token)) {
+
+            // ③ 인증 객체 생성
+            Authentication authentication =
+                    tokenProvider.getAuthentication(token);
+
+            // ④ SecurityContextHolder에 등록
+            SecurityContextHolder.getContext()
+                    .setAuthentication(authentication);
+        }
+
+        // ⑤ 다음 필터로 전달
         filterChain.doFilter(request, response);
     }
 
@@ -51,5 +65,24 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {  // 요청
             return authorizationHeader.substring(TOKEN_PREFIX.length());
         }
         return null;                           // 헤더가 없거나 Bearer로 시작하지 않으면 null
+    }
+
+    private String getAccessTokenFromCookie(
+            HttpServletRequest request
+    ) {
+        Cookie[] cookies = request.getCookies();
+
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+
+                if (ACCESS_TOKEN_COOKIE_NAME.equals(
+                        cookie.getName())) {
+
+                    return cookie.getValue();
+                }
+            }
+        }
+
+        return null;
     }
 }

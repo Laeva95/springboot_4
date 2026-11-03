@@ -7,6 +7,7 @@ import com.shinsunyoung.blog.config.oauth.OAuth2SuccessHandler;
 import com.shinsunyoung.blog.repository.RefreshTokenRepository;
 import com.shinsunyoung.blog.service.OAuth2UserCustomService;
 import com.shinsunyoung.blog.service.UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -21,7 +22,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @RequiredArgsConstructor
 @Configuration
@@ -31,6 +36,23 @@ public class WebOAuthSecurityConfig {
     private final TokenProvider tokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserService userService;
+
+    @Value("${app.cookie.secure:false}")
+    private boolean secureCookie;
+
+    private CookieCsrfTokenRepository csrfTokenRepository() {
+
+        CookieCsrfTokenRepository repository =
+                CookieCsrfTokenRepository.withHttpOnlyFalse();
+
+        repository.setCookieCustomizer(cookie -> cookie
+                .path("/")
+                .secure(secureCookie)
+                .sameSite("Lax")
+        );
+
+        return repository;
+    }
 
     // ❶ 시큐리티 검사를 건너뛸 정적 파일 경로
     @Bean
@@ -43,7 +65,12 @@ public class WebOAuthSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf(AbstractHttpConfigurer::disable)          // 토큰 방식이므로 CSRF 끔
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(csrfTokenRepository())
+                        .csrfTokenRequestHandler(
+                                new CsrfTokenRequestAttributeHandler()
+                        )
+                )        // 토큰 방식이므로 CSRF 끔
                 .httpBasic(AbstractHttpConfigurer::disable)     // 기본 인증 창 끔
                 .formLogin(AbstractHttpConfigurer::disable)     // 폼 로그인 끔 (OAuth2 로그인으로 대체)
                 .logout(AbstractHttpConfigurer::disable)        // 기본 로그아웃 끔 (화면 자바스크립트에서 처리)
@@ -52,7 +79,7 @@ public class WebOAuthSecurityConfig {
                 // ❸ 토큰 필터를 UsernamePasswordAuthenticationFilter 앞에 끼워 넣음 (10장 필터)
                 .addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/token").permitAll()   // 토큰 재발급은 누구나
+                        .requestMatchers("/api/token", "/api/refresh-token").permitAll()   // 토큰 재발급은 누구나
                         .requestMatchers("/api/**").authenticated()  // 나머지 API는 로그인 필요
                         .anyRequest().permitAll())                   // 화면 주소는 누구나
                 .oauth2Login(oauth2 -> oauth2
@@ -69,6 +96,10 @@ public class WebOAuthSecurityConfig {
                                 PathPatternRequestMatcher.pathPattern("/api/**")))
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin()))
+                .addFilterAfter(
+                        new CsrfCookieFilter(),
+                        CsrfFilter.class
+                )
                 .build();
     }
 

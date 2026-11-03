@@ -10,7 +10,8 @@ import java.time.Duration;
 @RequiredArgsConstructor
 @Service
 public class TokenService {
-
+    public static final Duration ACCESS_TOKEN_DURATION =
+            Duration.ofHours(2);
     private final TokenProvider tokenProvider;               // 토큰 생성·검증 담당
     private final RefreshTokenService refreshTokenService;   // 리프레시 토큰 조회 담당
     private final UserService userService;                   // 사용자 조회 담당
@@ -27,6 +28,9 @@ public class TokenService {
         User user = userService.findById(userId);
 
         // ④ 새 액세스 토큰 생성(유효 기간 2시간)
-        return tokenProvider.generateToken(user, Duration.ofHours(2));
+        return tokenProvider.generateToken(
+                user,
+                ACCESS_TOKEN_DURATION
+        );
     }
 }
