@@ -134,6 +134,9 @@ dependencies {
 
     // oauth2 사용을 위한 라이브러리
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // mysql db를 사용하기 위한 라이브러리
+    implementation 'com.mysql:mysql-connector-j'
 }
 
 tasks.named('test') {
